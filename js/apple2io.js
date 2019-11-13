@@ -338,7 +338,7 @@ export default function Apple2IO(cpu, callbacks)
             callbacks.reset();
         },
 
-        read: function apple2io_read(page, off) {
+        read: function apple2io_read(page, off, debugFlag) {
             var result = 0;
             var slot;
             var card;
@@ -361,12 +361,12 @@ export default function Apple2IO(cpu, callbacks)
                     _auxRom = card;
                 }
                 if (card) {
-                    result = card.read(page, off);
+                    result = card.read(page, off, debugFlag);
                 }
                 break;
             default:
                 if (_auxRom) {
-                    result = _auxRom.read(page, off);
+                    result = _auxRom.read(page, off, debugFlag);
                 }
                 break;
             }

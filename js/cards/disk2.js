@@ -25,6 +25,7 @@ export const DISK_TYPES = [
     'd13',
     'do',
     'dsk',
+    'hdv',
     'po',
     'nib',
     'woz'

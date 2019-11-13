@@ -18,6 +18,7 @@ import Tape, { TAPE_TYPES } from './ui/tape';
 import DiskII, { DISK_TYPES } from './cards/disk2';
 import Parallel from './cards/parallel';
 import RAMFactor from './cards/ramfactor';
+import SmartPort from './cards/smartport';
 import Thunderclock from './cards/thunderclock';
 
 import apple2e_charset from './roms/apple2e_char';
@@ -39,7 +40,7 @@ var paused = false;
 
 var hashtag;
 
-var DEBUG = true;
+var DEBUG = false;
 var TRACE = false;
 var MAX_TRACE = 256;
 var trace = [];
@@ -49,8 +50,11 @@ var disk_sets = {};
 var disk_cur_name = [];
 var disk_cur_cat = [];
 
+var cpu;
 var tape;
 var disk2;
+var io;
+var smartport;
 var driveLights;
 var _currentDrive = 1;
 
@@ -237,9 +241,17 @@ function doLoadLocalDisk(drive, file) {
         var parts = file.name.split('.');
         var ext = parts.pop().toLowerCase();
         var name = parts.join('.');
-        if (disk2.setBinary(drive, name, ext, this.result)) {
-            driveLights.label(drive, name);
-            initGamepad();
+        if (file.size > 800 * 1024) {
+            io.setSlot(7, smartport);
+            smartport.setBinary(drive, name, ext, this.result);
+            cpu.write(0x03, 0xf2, 0x03);
+            cpu.write(0x03, 0xf3, 0x96);
+            cpu.reset();
+        } else {
+            if (disk2.setBinary(drive, name, ext, this.result)) {
+                driveLights.label(drive, name);
+                initGamepad();
+            }
         }
     };
     fileReader.readAsArrayBuffer(file);
@@ -304,7 +316,7 @@ default:
 }
 
 var runTimer = null;
-var cpu = new CPU6502({'65C02': enhanced});
+cpu = new CPU6502({'65C02': enhanced});
 
 var context1, context2, context3, context4;
 
@@ -341,7 +353,7 @@ vm.multiScreen(multiScreen);
 var dumper = new ApplesoftDump(cpu);
 
 driveLights = new DriveLights();
-var io = new Apple2IO(cpu, vm);
+io = new Apple2IO(cpu, vm);
 var keyboard = new KeyBoard(cpu, io, true);
 var audio = new Audio(io);
 tape = new Tape(io);
@@ -353,13 +365,14 @@ cpu.addPageHandler(mmu);
 
 var parallel = new Parallel(io, 1, printer);
 var slinky = new RAMFactor(io, 2, 1024 * 1024);
+var clock = new Thunderclock(io, 5);
 disk2 = new DiskII(io, 6, driveLights);
-var clock = new Thunderclock(io, 7);
+smartport = new SmartPort(io, 7, cpu);
 
 io.setSlot(1, parallel);
 io.setSlot(2, slinky);
+io.setSlot(5, clock);
 io.setSlot(6, disk2);
-io.setSlot(7, clock);
 
 var showFPS = false;
 
