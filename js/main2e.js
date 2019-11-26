@@ -16,6 +16,7 @@ import KeyBoard from './ui/keyboard';
 import Printer from './ui/printer';
 import Tape, { TAPE_TYPES } from './ui/tape';
 
+import CFFA from './cards/cffa';
 import DiskII, { DISK_TYPES } from './cards/disk2';
 import Parallel from './cards/parallel';
 import RAMFactor from './cards/ramfactor';
@@ -249,28 +250,24 @@ function doLoadLocalDisk(drive, file) {
 function doLoadHTTP(drive, _url) {
     var url = _url || document.querySelector('#http_url').value;
     if (url) {
-        var req = new XMLHttpRequest();
-        req.open('GET', url, true);
-        req.responseType = 'arraybuffer';
-
-        req.onload = function() {
-            if (req.status !== 200) {
-                return window.alert('Unable to load "' + url + '"');
-            }
+        fetch(url).then(function(response) {
+            return response.arrayBuffer();
+        }).then(function(data) {
             var urlParts = url.split('/');
             var file = urlParts.pop();
             var fileParts = file.split('.');
             var ext = fileParts.pop().toLowerCase();
             var name = decodeURIComponent(fileParts.join('.'));
-            if (disk2.setBinary(drive, name, ext, req.response)) {
+            if (disk2.setBinary(drive, name, ext, data)) {
                 driveLights.label(drive, name);
                 if (!_url) {
                     MicroModal.close('http-modal');
                 }
                 initGamepad();
             }
-        };
-        req.send(null);
+        }).catch(function() {
+            window.alert('Unable to load "' + url + '"');
+        });
     }
 }
 
@@ -356,12 +353,14 @@ cpu.addPageHandler(mmu);
 var parallel = new Parallel(io, 1, printer);
 var slinky = new RAMFactor(io, 2, 1024 * 1024);
 disk2 = new DiskII(io, 6, driveLights);
-var clock = new Thunderclock(io, 7);
+var clock = new Thunderclock(io, 4);
+var cffa = new CFFA(io, 7);
 
 io.setSlot(1, parallel);
 io.setSlot(2, slinky);
+io.setSlot(4, clock);
 io.setSlot(6, disk2);
-io.setSlot(7, clock);
+io.setSlot(7, cffa);
 
 var showFPS = false;
 
