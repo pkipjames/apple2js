@@ -41,7 +41,7 @@ var paused = false;
 
 var hashtag;
 
-var DEBUG = true;
+var DEBUG = false;
 var TRACE = false;
 var MAX_TRACE = 256;
 var trace = [];
@@ -53,6 +53,7 @@ var disk_cur_cat = [];
 
 var tape;
 var disk2;
+var cffa;
 var driveLights;
 var _currentDrive = 1;
 
@@ -83,11 +84,11 @@ export function openSave(drive, event)
 {
     _currentDrive = parseInt(drive, 10);
 
-    var mimetype = 'application/octet-stream';
+    var mimeType = 'application/octet-stream';
     var data = disk2.getBinary(drive);
     var a = document.querySelector('#local_save_link');
 
-    var blob = new Blob([data], { 'type': mimetype });
+    var blob = new Blob([data], { 'type': mimeType });
     a.href = window.URL.createObjectURL(blob);
     a.download = driveLights.label(drive) + '.dsk';
 
@@ -258,14 +259,19 @@ function doLoadHTTP(drive, _url) {
             var fileParts = file.split('.');
             var ext = fileParts.pop().toLowerCase();
             var name = decodeURIComponent(fileParts.join('.'));
-            if (disk2.setBinary(drive, name, ext, data)) {
-                driveLights.label(drive, name);
-                if (!_url) {
-                    MicroModal.close('http-modal');
+            if (data.byteLength > 35 * 16 * 256) {
+                cffa.setDisk(drive, name, ext, data);
+            } else {
+                if (disk2.setBinary(drive, name, ext, data)) {
+                    driveLights.label(drive, name);
                 }
-                initGamepad();
             }
-        }).catch(function() {
+            if (!_url) {
+                MicroModal.close('http-modal');
+            }
+            initGamepad();
+        }).catch(function(error) {
+            console.error(error);
             window.alert('Unable to load "' + url + '"');
         });
     }
@@ -353,12 +359,12 @@ cpu.addPageHandler(mmu);
 var parallel = new Parallel(io, 1, printer);
 var slinky = new RAMFactor(io, 2, 1024 * 1024);
 disk2 = new DiskII(io, 6, driveLights);
-var clock = new Thunderclock(io, 4);
-var cffa = new CFFA(io, 7);
+var clock = new Thunderclock(io, 5);
+cffa = new CFFA(io, 7);
 
 io.setSlot(1, parallel);
 io.setSlot(2, slinky);
-io.setSlot(4, clock);
+io.setSlot(5, clock);
 io.setSlot(6, disk2);
 io.setSlot(7, cffa);
 
@@ -459,13 +465,13 @@ function run(pc) {
         cpu.setPC(pc);
     }
 
-    var ival = 30;
+    var interval = 30;
 
     var now, last = Date.now();
     var runFn = function() {
         now = Date.now();
 
-        var step = (now - last) * kHz, stepMax = kHz * ival;
+        var step = (now - last) * kHz, stepMax = kHz * interval;
         last = now;
         if (step > stepMax) {
             step = stepMax;
@@ -511,7 +517,7 @@ function run(pc) {
     if (_requestAnimationFrame) {
         _requestAnimationFrame(runFn);
     } else {
-        runTimer = setInterval(runFn, ival);
+        runTimer = setInterval(runFn, interval);
     }
 }
 
@@ -947,22 +953,22 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.disksave').forEach(function (el) { el.style.display = 'inline-block';});
     }
 
-    var oldcat = '';
+    var oldCategory = '';
     var option;
     for (var idx = 0; idx < window.disk_index.length; idx++) {
         var file = window.disk_index[idx];
-        var cat = file.category;
+        var category = file.category;
         var name = file.name, disk = file.disk;
-        if (cat != oldcat) {
+        if (category != oldCategory) {
             option = document.createElement('option');
-            option.value = cat;
-            option.innerText = cat;
+            option.value = category;
+            option.innerText = category;
             document.querySelector('#category_select').append(option);
 
-            disk_categories[cat] = [];
-            oldcat = cat;
+            disk_categories[category] = [];
+            oldCategory = category;
         }
-        disk_categories[cat].push(file);
+        disk_categories[category].push(file);
         if (disk) {
             if (!disk_sets[name]) {
                 disk_sets[name] = [];

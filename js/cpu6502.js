@@ -171,11 +171,13 @@ export default function CPU6502(options)
     }
 
     function readBytePC(dbg) {
-        var addr = (pc++) & 0xffff,
+        var addr = pc,
             page = addr >> 8,
             off = addr & 0xff;
 
         var result = readPages[page].read(page, off, dbg);
+
+        pc = (pc + 1) & 0xffff;
 
         if (!dbg) {
             cycles++;
