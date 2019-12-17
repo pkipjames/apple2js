@@ -1,4 +1,4 @@
-import MicroModal from 'micromodal';
+/*import MicroModal from 'micromodal';
 
 import Apple2IO from './apple2io';
 import ApplesoftDump from './applesoft/decompiler';
@@ -33,7 +33,7 @@ import IntBASIC from './roms/intbasic';
 import OriginalROM from './roms/original';
 
 import SYMBOLS from './symbols';
-
+*/
 var kHz = 1023;
 
 var focused = false;
